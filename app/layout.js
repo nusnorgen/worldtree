@@ -1,4 +1,5 @@
 import "./globals.css";
+import ClientWrapper from "../components/ClientWrapper";
 
 export const metadata = {
   title: "世界树 · 人类智慧晶体库",
@@ -15,7 +16,9 @@ export const viewport = {
 export default function RootLayout({ children }) {
   return (
     <html lang="zh-CN">
-      <body>{children}</body>
+      <body>
+        <ClientWrapper>{children}</ClientWrapper>
+      </body>
     </html>
   );
 }

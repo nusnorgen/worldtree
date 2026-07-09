@@ -1,6 +1,9 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { sGet, sSet } from "../lib/storage";
+import { supabase } from "../lib/supabaseClient";
+import { useAuth } from "../lib/authContext";
+import AuthModal from "../components/AuthModal";
 
 /* ============================================================
    世界树 · 人类智慧晶体库
@@ -169,6 +172,8 @@ export default function App() {
   const dragRef = useRef(null);
   const movedRef = useRef(false);
   const toastTimer = useRef(null);
+  const [showAuth, setShowAuth] = useState(false);
+  const { user, loading: authLoading } = useAuth();
 
   useEffect(() => {
     const onR = () => setIsMobile(window.innerWidth < 768);
@@ -221,9 +226,10 @@ export default function App() {
 
   /* 提交建言 */
   const submitInsight = async () => {
+    if (!user) { showToast("请先登录后再刻入建言"); setShowAuth(true); return; }
     const text = draft.trim();
     if (!text || !selected) return;
-    const author = profile.name || nameDraft.trim() || "无名旅人";
+    const author = profile.name || nameDraft.trim() || user.email?.split("@")[0] || "无名旅人";
     if (!profile.name) {
       const np = { ...profile, name: author };
       setProfile(np);
@@ -240,6 +246,7 @@ export default function App() {
 
   /* 点赞 */
   const vote = async (insightId) => {
+    if (!user) { showToast("请先登录后再点赞"); setShowAuth(true); return; }
     if (profile.voted.includes(insightId)) return;
     const latest = (await sGet(`wt-insights:${selected}`, true)) || insights;
     const merged = latest.map((it) => (it.id === insightId ? { ...it, votes: it.votes + 1 } : it));
@@ -282,6 +289,7 @@ ${nodeList}
 
   /* AI 提纯：把建言凝成共识晶体 */
   const refine = async () => {
+    if (!user) { showToast("请先登录后再使用 AI 提纯"); setShowAuth(true); return; }
     if (!selected || insights.length < 2 || refining) return;
     setRefining(true);
     const node = LAYOUT.byId[selected];
@@ -393,15 +401,42 @@ ${top}
           )}
         </div>
 
-        {/* 旅人等级 */}
-        <div className="shrink-0 flex items-center gap-2 rounded-full px-3 py-1.5" style={{ background: "rgba(20,27,52,.85)", border: "1px solid #26314F" }} title={lv.next ? `距「${lv.next.name}」还需 ${lv.next.wp - profile.wp} WP` : "已至世界树"}>
-          <span className="text-sm" style={{ color: "#F5C97B" }}>{lv.cur.sym}</span>
-          <div className="leading-none">
-            <div className="text-xs font-medium">{lv.cur.name} <span style={{ color: "#8B94AD" }}>· {profile.wp} WP</span></div>
-            <div className="mt-1 h-1 w-20 rounded-full overflow-hidden" style={{ background: "#1B2340" }}>
-              <div className="h-full rounded-full" style={{ width: `${lv.pct}%`, background: "linear-gradient(90deg,#F5C97B,#67E8F9)" }} />
+        {/* 旅人等级 / 登录 */}
+        <div className="shrink-0 flex items-center gap-2">
+          {authLoading ? (
+            <div className="text-xs" style={{ color: "#5A6584" }}>…</div>
+          ) : user ? (
+            <div className="flex items-center gap-2 rounded-full px-3 py-1.5" style={{ background: "rgba(20,27,52,.85)", border: "1px solid #26314F" }} title={lv.next ? `距「${lv.next.name}」还需 ${lv.next.wp - profile.wp} WP` : "已至世界树"}>
+              <span className="text-sm" style={{ color: "#F5C97B" }}>{lv.cur.sym}</span>
+              <div className="leading-none">
+                <div className="flex items-center gap-1.5">
+                  <span className="text-xs font-medium">{lv.cur.name}</span>
+                  <span className="text-xs" style={{ color: "#8B94AD" }}>· {profile.wp} WP</span>
+                </div>
+                <div className="mt-1 h-1 w-20 rounded-full overflow-hidden" style={{ background: "#1B2340" }}>
+                  <div className="h-full rounded-full" style={{ width: `${lv.pct}%`, background: "linear-gradient(90deg,#F5C97B,#67E8F9)" }} />
+                </div>
+              </div>
+              <span
+                className="text-xs ml-1 cursor-pointer hover:opacity-80"
+                style={{ color: "#5A6584" }}
+                title="登出"
+                onClick={async () => {
+                  await supabase.auth.signOut();
+                  setProfile({ name: "", wp: 0, voted: [] });
+                  showToast("已登出，旅人档案已重置");
+                }}
+              >⇥</span>
             </div>
-          </div>
+          ) : (
+            <button
+              onClick={() => setShowAuth(true)}
+              className="rounded-full px-4 py-1.5 text-xs font-medium transition-all"
+              style={{ background: "rgba(103,232,249,.12)", border: "1px solid rgba(103,232,249,.4)", color: "#67E8F9" }}
+            >
+              登录 / 注册
+            </button>
+          )}
         </div>
       </header>
 
@@ -580,6 +615,9 @@ ${top}
           {toast}
         </div>
       )}
+
+      {/* ---------- 认证弹窗 ---------- */}
+      {showAuth && <AuthModal onClose={() => setShowAuth(false)} />}
     </div>
   );
 }
