@@ -315,7 +315,16 @@ ${top}
     if (Math.abs(dx) + Math.abs(dy) > 5) movedRef.current = true;
     setView((v) => ({ ...v, tx: d.tx + dx, ty: d.ty + dy }));
   };
-  const onPointerUp = (e) => {     dragRef.current = null;     e.currentTarget.releasePointerCapture?.(e.pointerId);   };
+  const onPointerUp = (e) => {
+    const wasDrag = movedRef.current;
+    dragRef.current = null;
+    e.currentTarget.releasePointerCapture?.(e.pointerId);
+    if (!wasDrag) {
+      const el = document.elementFromPoint(e.clientX, e.clientY);
+      const nodeEl = el && el.closest ? el.closest("[data-node-id]") : null;
+      if (nodeEl) openNode(nodeEl.getAttribute("data-node-id"));
+    }
+  };
   const zoom = (f) => setView((v) => ({ ...v, k: Math.min(2.4, Math.max(0.5, v.k * f)) }));
   const onWheel = (e) => zoom(e.deltaY < 0 ? 1.12 : 0.89);
 
@@ -433,8 +442,7 @@ ${top}
               const ly = n.depth === 0 ? 34 : Math.sin(n.angle) * labelR + 3;
               const anchor = n.depth === 0 ? "middle" : Math.abs(Math.cos(n.angle)) < 0.35 ? "middle" : Math.cos(n.angle) > 0 ? "start" : "end";
               return (
-                <g key={n.id} transform={`translate(${n.x},${n.y})`} className="cursor-pointer"
-                  onClick={(e) => { if (movedRef.current) return; e.stopPropagation(); openNode(n.id); }}>
+                <g key={n.id} data-node-id={n.id} transform={`translate(${n.x},${n.y})`} className="cursor-pointer">
                   {isSel && <circle r="14" fill="none" stroke={n.color} strokeWidth="1.2" style={{ animation: "pulseRing 1.6s ease-out infinite" }} />}
                   {isHot && <circle r={r + 6} fill="none" stroke="#F5C97B" strokeWidth="1.4" strokeDasharray="3 3" />}
                   <polygon points={hexPoints(r)}
