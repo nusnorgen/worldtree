@@ -1,7 +1,7 @@
 "use client";
 import React, { useState, useEffect, useRef, useMemo, useCallback } from "react";
 import { sGet, sSet } from "../lib/storage";
-import { getSupabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 import { useAuth } from "../lib/authContext";
 import AuthModal from "../components/AuthModal";
 
@@ -422,8 +422,7 @@ ${top}
                 style={{ color: "#5A6584" }}
                 title="登出"
                 onClick={async () => {
-                  const supabase = getSupabase();
-                  if (supabase) await supabase.auth.signOut();
+                  await supabase.auth.signOut();
                   setProfile({ name: "", wp: 0, voted: [] });
                   showToast("已登出，旅人档案已重置");
                 }}

@@ -1,6 +1,6 @@
 "use client";
 import { useState } from "react";
-import { getSupabase } from "../lib/supabaseClient";
+import { supabase } from "../lib/supabaseClient";
 
 const TABS = [
   { key: "login", label: "登录" },
@@ -9,37 +9,22 @@ const TABS = [
   { key: "google", label: "Google" },
 ];
 
-/**
- * 认证弹窗组件：支持邮箱密码登录/注册、魔法链接免密登录、Google OAuth。
- * 设计风格与"世界树"暗色主题一致。
- */
 export default function AuthModal({ onClose }) {
   const [tab, setTab] = useState("login");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
-  const [msg, setMsg] = useState(null); // { type: "success"|"error", text }
+  const [msg, setMsg] = useState(null);
 
   const showMsg = (text, type = "error") => {
     setMsg({ text, type });
     setTimeout(() => setMsg(null), 4000);
   };
 
-  const getClient = () => {
-    const client = getSupabase();
-    if (!client) {
-      showMsg("无法连接到认证服务，请稍后重试");
-      return null;
-    }
-    return client;
-  };
-
   /** 邮箱 + 密码登录 */
   const handleLogin = async (e) => {
     e.preventDefault();
     if (!email.trim() || !password) return;
-    const supabase = getClient();
-    if (!supabase) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithPassword({
       email: email.trim(),
@@ -65,8 +50,6 @@ export default function AuthModal({ onClose }) {
       showMsg("密码至少需要 6 位字符");
       return;
     }
-    const supabase = getClient();
-    if (!supabase) return;
     setLoading(true);
     const { error } = await supabase.auth.signUp({
       email: email.trim(),
@@ -90,8 +73,6 @@ export default function AuthModal({ onClose }) {
   const handleMagicLink = async (e) => {
     e.preventDefault();
     if (!email.trim()) return;
-    const supabase = getClient();
-    if (!supabase) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithOtp({
       email: email.trim(),
@@ -109,8 +90,6 @@ export default function AuthModal({ onClose }) {
 
   /** Google OAuth 登录 */
   const handleGoogle = async () => {
-    const supabase = getClient();
-    if (!supabase) return;
     setLoading(true);
     const { error } = await supabase.auth.signInWithOAuth({
       provider: "google",
@@ -124,7 +103,6 @@ export default function AuthModal({ onClose }) {
 
   return (
     <>
-      {/* 遮罩 */}
       <div
         className="fixed inset-0 z-50 flex items-center justify-center p-4"
         style={{
@@ -133,7 +111,6 @@ export default function AuthModal({ onClose }) {
         }}
         onClick={onClose}
       >
-        {/* 弹窗 */}
         <div
           className="fade-up w-full max-w-md rounded-2xl overflow-hidden"
           style={{
@@ -143,7 +120,6 @@ export default function AuthModal({ onClose }) {
           }}
           onClick={(e) => e.stopPropagation()}
         >
-          {/* 头部 */}
           <div
             className="p-5 flex items-center justify-between"
             style={{ borderBottom: "1px solid #1B2340" }}
@@ -166,7 +142,6 @@ export default function AuthModal({ onClose }) {
             </button>
           </div>
 
-          {/* 标签切换 */}
           <div className="flex px-5 pt-4 gap-1">
             {TABS.map((t) => (
               <button
@@ -192,7 +167,6 @@ export default function AuthModal({ onClose }) {
           </div>
 
           <div className="p-5">
-            {/* 消息提示 */}
             {msg && (
               <div
                 className="text-xs px-3 py-2 rounded-lg mb-4"
@@ -213,7 +187,6 @@ export default function AuthModal({ onClose }) {
               </div>
             )}
 
-            {/* Google OAuth */}
             {tab === "google" ? (
               <div className="text-center">
                 <p className="text-sm mb-4" style={{ color: "#8B94AD" }}>
@@ -337,7 +310,6 @@ export default function AuthModal({ onClose }) {
               </form>
             )}
 
-            {/* 底部说明 */}
             <p
               className="text-xs mt-4 text-center"
               style={{ color: "#3E4767" }}
