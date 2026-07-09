@@ -1,4 +1,5 @@
-import Anthropic from "@anthropic-ai/sdk";
+// 使用 DeepSeek API（兼容 OpenAI 的 /chat/completions 格式）
+// key 只保存在服务器端环境变量里，浏览器看不到
 
 // 简单的内存限流：同一 IP 每分钟最多 10 次请求，防止被刷爆额度
 const rateLimitMap = new Map();
@@ -29,21 +30,31 @@ export async function POST(req) {
       return Response.json({ error: "无效请求" }, { status: 400 });
     }
 
-    const anthropic = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-    const msg = await anthropic.messages.create({
-      model: "claude-sonnet-4-6",
-      max_tokens: 1000,
-      messages: [{ role: "user", content: prompt }],
+    const res = await fetch("https://api.deepseek.com/v1/chat/completions", {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+        Authorization: `Bearer ${process.env.DEEPSEEK_API_KEY}`,
+      },
+      body: JSON.stringify({
+        model: "deepseek-chat",
+        max_tokens: 1000,
+        messages: [{ role: "user", content: prompt }],
+      }),
     });
 
-    const text = (msg.content || [])
-      .filter((b) => b.type === "text")
-      .map((b) => b.text)
-      .join("\n");
+    if (!res.ok) {
+      const errBody = await res.text();
+      console.error("DeepSeek API error:", res.status, errBody);
+      return Response.json({ error: "AI 请求失败" }, { status: 500 });
+    }
+
+    const data = await res.json();
+    const text = data.choices?.[0]?.message?.content || "";
 
     return Response.json({ text });
   } catch (e) {
-    console.error("Claude API error:", e);
+    console.error("DeepSeek API error:", e);
     return Response.json({ error: "AI 请求失败" }, { status: 500 });
   }
 }
