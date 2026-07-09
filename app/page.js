@@ -315,7 +315,7 @@ ${top}
     if (Math.abs(dx) + Math.abs(dy) > 5) movedRef.current = true;
     setView((v) => ({ ...v, tx: d.tx + dx, ty: d.ty + dy }));
   };
-  const onPointerUp = () => { dragRef.current = null; };
+  const onPointerUp = (e) => {     dragRef.current = null;     e.currentTarget.releasePointerCapture?.(e.pointerId);   };
   const zoom = (f) => setView((v) => ({ ...v, k: Math.min(2.4, Math.max(0.5, v.k * f)) }));
   const onWheel = (e) => zoom(e.deltaY < 0 ? 1.12 : 0.89);
 
